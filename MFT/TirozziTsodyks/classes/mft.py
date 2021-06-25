@@ -310,3 +310,129 @@ class MFTCurves:
 		return dyn_del
 
 	
+class MFTCurvesBifurcationDiagram:
+	'''This class provides the curves from the mft'''
+
+	def __init__(self):
+		self.GI = Integrals()
+		# gamma
+		self.A =  3.
+		self.GI.A = self.A
+	def value_A(self,A):
+		self.A =  A
+		self.GI.A = self.A
+	
+	def overlap(self,del0,m_init):
+		m=m_init
+		error=1.
+		m_min = 1e-2 # min value of m
+		max_iter = 5000 # max value iterations
+		for i in range(max_iter):
+			sol = self.GI.overlap(del0,m)
+			error=np.abs(m-sol)
+			m=sol
+			if error<1e-7:
+				return m
+			if m<m_min:
+				return m
+		return m
+		
+
+
+	
+	#critical overlap
+	def critical_overlap(self):
+		field = lambda x:self.GI.Doverlap(x)-1.
+		try:
+			del0_c = brentq(field,0,20.)
+		except:
+			del0_c = 0
+		return del0_c
+
+	# transition to chaos background state
+	def chaos_background(self):
+		# defining the model
+		myfield = lambda x:self.GI.TF(x,0)/(self.GI.DTF(x,0))-x
+		#chaos background
+		del0 = brentq(myfield,0.,20.)
+		print('del0',del0)
+		print('int 1', self.GI.DTF(del0,0))
+		print('int 2', self.GI.TF(del0,0))
+		alpha_c = 1./ self.GI.DTF(del0,0)
+		return alpha_c
+
+	#Transition to chaos fixed points
+	def chaos_fixed_points(self,m_init=1.):
+		# defining the model
+		m  = lambda y: self.overlap(y,m_init) # the overlap dep del0
+		field = lambda x:self.GI.TF(x,m(x))/self.GI.DTF(x,m(x))-x
+		del0_c = brentq(field,0.0,20.,xtol=1e-4)
+		m_c = m(del0_c)
+		alpha_c = 1./self.GI.DTF(del0_c,m_c)
+		return del0_c,m_c,alpha_c
+	
+	#computing from TT paper
+	def capacity_SMFT(self):
+		del0_c= self.critical_overlap()
+		alpha_c = del0_c/self.GI.TF(del0_c,0)
+		return del0_c,0,alpha_c
+	
+	#computing from TT paper
+	def capacity_DMFT(self):
+		del0= self.critical_overlap()
+		m = 0
+		alpha_c = ((del0 * self.A)**2)/(2 * (self.GI.Int_TF2(del0,m)-self.GI.Int_TF(del0,m)**2))
+		return alpha_c
+	
+	#overlap curve static mft
+	def overlap_SMFT(self,alpha,q0=1.):
+		# defining the model
+		m = lambda d0: self.overlap(d0,q0)
+		myfield = lambda x:alpha*self.GI.TF(x,m(x))-x
+		del0 = brentq(myfield,0,2000.)
+		return self.overlap(del0,q0)
+
+	def f2(self,del0,del1,alpha,q0):
+		s = 1e-2
+		if del0 <0:
+			return 1e6
+		elif del1+s<del0:
+			# defining the model
+			m = lambda d0: self.overlap(d0,q0)
+			
+			int0 = lambda d0:self.GI.Int_TF2(d0,m(d0))
+			pot0 = lambda d0: -(d0**2)/2. +(1./self.A**2) * int0(d0) * alpha
+		
+			int1 = lambda d0,d1:self.GI.IntTF_del1(d0,d1,m(d0))
+			pot1 = lambda d0,d1: -(d1**2)/2. + (1./self.A**2) * int1(d0,d1) * alpha
+			
+			f2 = lambda d0,d1:pot1(d0,d1)-pot0(d0)
+			
+			return f2(del0,del1)
+		
+		else:
+			return 1e6
+		
+	def f1(self,del0,del1,alpha,q0):
+		s = 1e-2
+		if del0<=0:
+			return 1e6
+		elif del1+s<del0:
+			# defining the model
+			m = lambda d0: self.overlap(d0,q0)
+			f1 = lambda d0,d1:alpha * self.GI.TF_del1(d0,d1,m(d0))-d1	
+			
+			return f1(del0,del1)
+		else:
+			return 1e6
+
+	
+	#overlap curve static dmft
+	def overlap_DMFT(self,alpha,q0=1.,x0 = np.array([0.5,0.])):
+		m = lambda d0: self.overlap(d0,q0)
+		field = lambda x:np.array([self.f1(x[0],x[1],alpha,q0),self.f2(x[0],x[1],alpha,q0)])
+		#sol = root(field,x0,method='hybr',options={'xtol': 1.e-04})
+		sol = root(field,x0)
+		del0 = sol.x[0]
+		return sol.x,m(del0)
+
