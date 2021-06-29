@@ -5,7 +5,7 @@ from classes.mft import * # solving m and then del0 and del1
 
 
 from pathlib import Path
-PATH = "../../../files/MFT/TirozziTsodyks/"
+PATH = "../../files/MFT/TirozziTsodyks/"
 Path(PATH).mkdir(parents=True, exist_ok=True)
 
 
@@ -38,7 +38,7 @@ if True:
 		# TT mean field equations 
 		# f2 has the 0.5 multiplying for this 2**2
 
-		curves = MFTCurves()
+		curves = MFTCurvesBifurcationDiagram()
 		curves.value_A(A)
 		
 		# capacity DMFT

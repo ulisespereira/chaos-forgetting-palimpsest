@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 ''' Producing  the SMFT and DMFT curves for the overlap and delta0'''
 from pathlib import Path
-PATH = "../../../files/MFT/TirozziTsodyks/"
+PATH = "../../files/MFT/TirozziTsodyks/"
 Path(PATH).mkdir(parents=True, exist_ok=True)
 
 A = 5.5 #np.arange(0.2,4.2,0.2)
