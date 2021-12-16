@@ -6,18 +6,22 @@ import sys
 import os
 
 tag = int(sys.argv[1])# tag realization/seed
-
+p = int(sys.argv[2])
+amp =  float(sys.argv[3])
+N = int(sys.argv[4])
 
 parameters_values = dict(
         seed = tag, #random seed
-        N = 20000, #number of neurons
+        N = N, #number of neurons
         tau = 20.,#neuron timescale
         
-        tau_palimpsest = .5, #time forgetting
-        n_tau_palimpsest = 6, #apprimetly infinity, here 6 taus
-	
+        tau_palimpsest = 'inf',#.5, #time forgetting
+        n_tau_palimpsest = 6,#apprimetly infinity, here 6 taus
+        p = p, #tirozzi&tsodyks setting 	
+        
+        lr_data = False,
         #parameters learning rule
-        amp = 10,
+        amp = amp,
         qf = 0.5,
         bf = 1e6,
         bg = 1e6,
@@ -37,10 +41,12 @@ parameters_values = dict(
         indexes_neurons = np.array([0]) #neuron dynamics saved
         )
 
-path = 'matrices/'#path where connecitivty matrices saved
+path = ''#path where connecitivty matrices saved
 N = str(int(parameters_values['N']/1000))
 real = str(int(parameters_values['seed']))
-name = 'matrix_N_' + N + 'K_seed_'+ real +'.p'
+p = str(int(parameters_values['p']))
+A = str(round(parameters_values['amp'], 1))
+name = 'matrix_N_' + N + 'K_p_'+ p +'_seed_'+ real + '_A_'+ A +'.p'
 if path == '':
     pass
 else:
