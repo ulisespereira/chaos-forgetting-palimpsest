@@ -55,6 +55,27 @@ class Integrals:
         sol = self.dx * np.einsum('i,i',TF,self.normal_pdf)
         return sol
 
+    # overlap two-states	
+    def overlap_mixed(self, del0 ,m1, t1, m2, t2):	
+        phi = lambda x: np.tanh(self.A * x)
+        sdfield = np.sqrt(del0) * self.xgrid
+        TF1 = phi(m1 * self.kernel(t1) + m2 * self.kernel(t2) +  sdfield)
+        TF2 = phi(m1 * self.kernel(t1) - m2 * self.kernel(t2) +  sdfield)
+        TF = (TF1 + TF2)/2.
+        sol = self.dx * np.einsum('i,i',TF,self.normal_pdf)
+        return sol
+    
+    # TF * TF two-states	
+    def TF_mixed(self,del0, m1, t1, m2, t2):	
+        phi = lambda x: np.tanh(self.A * x)
+        sdfield = np.sqrt(del0) * self.xgrid
+        TF2_1 = phi(sdfield + m1 * self.kernel(t1) + m2 * self.kernel(t2))**2
+        TF2_2 = phi(sdfield + m1 * self.kernel(t1) - m2 * self.kernel(t2))**2
+        TF2 = (TF2_1 + TF2_2)/2.
+        sol = self.dx * np.einsum('i,i', TF2, self.normal_pdf)
+        return sol
+
+
     # TF * TF TT	
     def TF(self,del0,m,t):	
         phi = lambda x: np.tanh(self.A * x)
@@ -78,6 +99,19 @@ class Integrals:
         INT_TF2 = int_phi(sdfield + m * self.kernel(t))**2
         sol = self.dx * np.einsum('i,i',INT_TF2,self.normal_pdf)
         return sol
+    
+    # TF * TF TT	
+    def Int_TF2_mixed(self,del0, m1, t1, m2, t2):	
+        int_phi = lambda x: np.log(np.cosh(self.A * x))
+        sdfield = np.sqrt(del0) * self.xgrid
+        INT_TF2_1 = int_phi(sdfield + m1 * self.kernel(t1) + m2 * self.kernel(t2))**2
+        INT_TF2_2 = int_phi(sdfield + m1 * self.kernel(t1) - m2 * self.kernel(t2))**2
+        sol_1 = self.dx * np.einsum('i,i', INT_TF2_1, self.normal_pdf)
+        sol_2 = self.dx * np.einsum('i,i', INT_TF2_2, self.normal_pdf)
+        sol =  (sol_1 + sol_2)/2.
+        return sol
+    
+    
     # TF * TF TT	
     def Int_TF(self,del0,m,t):	
         int_phi = lambda x: np.log(np.cosh(self.A * x))
@@ -107,6 +141,33 @@ class Integrals:
 
             return int_p 
 
+    
+    # indegral d0 and d1 chaos
+    def TF_d1_mixed(self,del0, del1, m1, t1, m2, t2):	
+        if del0-del1<=1e-20:
+            return self.TF_mixed(del0, m1, t1, m2, t2) 
+        else:
+            phi = lambda x: np.tanh(self.A * x)
+            
+            
+            d0_d1 = np.sqrt(del0-del1) * self.xgrid
+            d1 = np.sqrt(del1) *  self.xgrid
+            sdf = np.add.outer(d0_d1,d1)
+            
+            
+            TF_1 = phi(sdf + m1 * self.kernel(t1) + m2 * self.kernel(t2))
+            TF_2 = phi(sdf + m1 * self.kernel(t1) - m2 * self.kernel(t2))
+
+            s_int_1 = self.dx * np.einsum('ij,i->j',TF_1,self.normal_pdf)
+            s_int_2 = self.dx * np.einsum('ij,i->j',TF_2,self.normal_pdf)
+            
+            int_p_1 = self.dx * np.einsum('i,i,i',s_int_1, s_int_1, self.normal_pdf)
+            int_p_2 = self.dx * np.einsum('i,i,i',s_int_2, s_int_2,self.normal_pdf)
+
+            int_p = (int_p_1 + int_p_2)/2.
+
+            return int_p 
+
     # indegral d0 and d1 chaos
     def Int_TF2_d1(self,del0,del1,m,t):	
         if del0-del1<=1e-20:
@@ -126,6 +187,33 @@ class Integrals:
             int_p = self.dx * np.einsum('i,i,i',s_int,s_int,self.normal_pdf)
 
 
+            return int_p 
+
+    # indegral d0 and d1 chaos
+    def Int_TF2_d1_mixed(self, del0, del1, m1, t1, m2, t2):	
+        if del0-del1<=1e-20:
+            return self.Int_TF2_mixed(del0, m1, t1, m2, t2) 
+        else:
+            int_phi = lambda x: np.log(np.cosh(self.A * x))
+            
+            
+            d0_d1 = np.sqrt(del0-del1) * self.xgrid
+            d1 = np.sqrt(del1) *  self.xgrid
+            sdf = np.add.outer(d0_d1,d1)
+            
+            
+            INT_TF1 = int_phi(sdf + m1 * self.kernel(t1) + m2 * self.kernel(t2))
+            INT_TF2 = int_phi(sdf + m1 * self.kernel(t1) - m2 * self.kernel(t2))
+            #INT_TF3 = int_phi(sdf - m1 * self.kernel(t1) + m2 * self.kernel(t2))
+            #INT_TF4 = int_phi(sdf - m1 * self.kernel(t1) + m2 * self.kernel(t2))
+
+            s_int_1 = self.dx * np.einsum('ij,i->j',INT_TF1, self.normal_pdf)
+            int_p_1 = self.dx * np.einsum('i,i,i',s_int_1, s_int_1, self.normal_pdf)
+
+            s_int_2 = self.dx * np.einsum('ij,i->j',INT_TF2, self.normal_pdf)
+            int_p_2 = self.dx * np.einsum('i,i,i',s_int_2, s_int_2, self.normal_pdf)
+            
+            int_p =  (int_p_1 + int_p_2)/2.
             return int_p 
 
 class MFTCurves:
@@ -185,6 +273,51 @@ class MFTCurves:
         sol = root(field, x0, method='hybr')
         return sol.x[0], sol.x[1]
 	
+    #overlap curve static Dft
+    def overlap_DMFT_mixed(self, t, t0 = 0):
+
+        # defining the model 
+        dt1 = 0.1
+        dt2 = 0.1
+        dt3 = 0.1
+        
+        m1 = 1.
+        m2 = 0.1
+        d0 = 0.0
+        d1 = 0.0
+        error=1.
+        
+        max_iter = 10000000
+        
+        fm1 = lambda d0, d1, m1, t1, m2, t2:self.GI.overlap_mixed(d0, m1, t1, m2, t2)
+        fm2 = lambda d0, d1, m1, t1, m2, t2:self.GI.overlap_mixed(d0, m1, t1, m2, t2) 
+        def fd0(d0, d1, m1, t1, m2, t2):
+            return np.sqrt( ((2 * self.gam)/(self.A**2)) * (self.GI.Int_TF2_mixed(d0, m1, t1, m2, t2) - self.GI.Int_TF2_d1_mixed(d0, d1, m1, t1, m2, t2)) + d1**2)
+        fd1 = lambda d0, d1, m1, t1, m2, t2:self.gam * self.GI.TF_d1_mixed(d0, d1, m1, t1, m2, t2)
+
+        for i in range(max_iter):
+            f_m1 = fm1(d0, d1, m1, t, m2, t0)
+            f_m2 = fm2(d0, d1, m2, t0, m1, t)
+            f_d0 = fd0(d0, d1, m1, t, m2, t0)
+            f_d1 = fd1(d0, d1, m1, t, m2, t0)
+            error = max([abs(m1 - f_m1), abs(m2 - f_m2), abs(d0 - f_d0), abs(d1 - f_d1)])
+            #print 'd0=',d0,'d1=',d1,'m=',m,'error',error
+            if error<1e-4:
+                m1 = m1 + dt1 * (f_m1 - m1)
+                m2 = m2 + dt1 * (f_m2 - m2)
+                d0 = d0 + dt2 * (f_d0 - d0)
+                d1 = d1 + dt3 * (f_d1 - d1)
+                return d0, d1, m1, m2
+            #print(i, error, m1, m2)
+            if m1<1e-2: #after capacity
+                #self.overlap_DMFT_mixed(self, t0):
+                return d0, d1, 0, m2
+            m1 = m1 + dt1 * (f_m1 - m1)
+            m2 = m2 + dt2 * (f_m2 - m2)
+            d0 = d0 + dt2 * (f_d0 - d0)
+            d1 = d1 + dt3 * (f_d1 - d1)
+        return d0, d1, m1, m2
+
     #overlap curve static Dft
     def overlap_DMFT(self, t):
 
@@ -250,3 +383,38 @@ class MFTCurves:
             m = m + t1 * (f_m-m)
             d0 = d0 + t2 * (f_d0-d0)
         return d0, m
+    
+    #overlap curve static mft
+    def overlap_SMFT_mixed(self,t, t0=0):
+        # defining the model
+        
+        dt1 = 0.1
+        dt2 = 0.1
+        dt3 = 0.1
+        
+        m1 = 1.
+        m2 = 0.1
+        d0 = 0.
+        error = 1.
+        max_iter = 10000000
+
+        fm1 = lambda d0, m1, t1, m2, t2:self.GI.overlap_mixed(d0, m1, t1, m2, t2)
+        fm2 = lambda d0, m1, t1, m2, t2:self.GI.overlap_mixed(d0, m1, t1, m2, t2)
+        fd0 = lambda d0, m1, t1, m2, t2:self.GI.TF_mixed(d0, m1, t1, m2, t2)
+        
+        for i in range(max_iter):
+            f_m1 = fm1(d0, m1, t, m2, t0)
+            f_m2 = fm2(d0, m2, t0, m1, t)
+            f_d0 = self.gam *  fd0(d0, m1, t, m2, t0)
+            error = max([abs(m1 - f_m1), abs(m2 - f_m2), abs(d0 - f_d0)])
+            if error<1e-6:
+                m1 = m1 + dt1 * (f_m1 - m1)
+                m2 = m2 + dt2 * (f_m2 - m2)
+                d0 = d0 + dt2 * (f_d0 - d0)
+                return d0, m1, m2
+            if m1<1e-2: #after capacity
+                return d0, 0, m2
+            m1 = m1 + dt1 * (f_m1 - m1)
+            m2 = m2 + dt2 * (f_m2 - m2)
+            d0 = d0 + dt2 * (f_d0 - d0)
+        return d0, m1, m2
